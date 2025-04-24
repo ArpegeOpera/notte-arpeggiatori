@@ -2,16 +2,20 @@
 const SUPABASE_URL = 'https://kfodrrjvlskvkzjnqfzs.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtmb2Rycmp2bHNrdmt6am5xZnpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0MTg2NzAsImV4cCI6MjA2MDk5NDY3MH0.FNJA93ggmRmQaD9OnpSnVFYB3EreeRpJ33zSTsxS28c';
 
+// Debug: Log configuration
+console.log('SUPABASE_URL:', SUPABASE_URL);
+console.log('SUPABASE_ANON_KEY:', SUPABASE_ANON_KEY?.substring(0, 10) + '...');
 
 // Check if user is logged in
 if (!localStorage.getItem('user_id')) {
     window.location.href = 'index.html';
 }
 
+// Initialize DOM elements
 const dropzone = document.getElementById('dropzone');
-const fileInput = document.getElementById('fileInput');
+const fileInput = document.getElementById('file-input');
 const preview = document.getElementById('preview');
-const files = [];
+let selectedFiles = [];
 
 // Handle drag and drop
 dropzone.addEventListener('dragover', (e) => {
@@ -38,18 +42,27 @@ fileInput.addEventListener('change', (e) => {
     handleFiles(e.target.files);
 });
 
-function handleFiles(newFiles) {
-    Array.from(newFiles).forEach(file => {
-        if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
-            files.push(file);
-            createThumbnail(file);
+function handleFiles(fileList) {
+    // Convert FileList to Array and validate files
+    const newFiles = Array.from(fileList).filter(file => {
+        const isValid = file.type.startsWith('image/') || file.type.startsWith('video/');
+        if (!isValid) {
+            console.warn('Skipping invalid file:', file.name, file.type);
         }
+        return isValid;
     });
+
+    // Debug: Log files being added
+    console.log('Adding files:', newFiles.map(f => ({ name: f.name, type: f.type })));
+
+    selectedFiles.push(...newFiles);
+    newFiles.forEach(createThumbnail);
 }
 
 function createThumbnail(file) {
     const thumbnail = document.createElement('div');
     thumbnail.className = 'thumbnail-container';
+    thumbnail.style.position = 'relative';
 
     if (file.type.startsWith('image/')) {
         const img = document.createElement('img');
@@ -78,9 +91,9 @@ function createThumbnail(file) {
     removeBtn.style.cursor = 'pointer';
 
     removeBtn.addEventListener('click', () => {
-        const index = files.indexOf(file);
+        const index = selectedFiles.indexOf(file);
         if (index > -1) {
-            files.splice(index, 1);
+            selectedFiles.splice(index, 1);
             thumbnail.remove();
         }
     });
@@ -89,16 +102,16 @@ function createThumbnail(file) {
     preview.appendChild(thumbnail);
 }
 
-document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+document.getElementById('upload-form').addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    if (files.length === 0) {
+    if (selectedFiles.length === 0) {
         alert('Seleziona almeno un file');
         return;
     }
 
     try {
-        // Create post
+        // Create post first
         const postResponse = await fetch(`${SUPABASE_URL}/rest/v1/posts`, {
             method: 'POST',
             headers: {
@@ -113,20 +126,27 @@ document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             })
         });
 
-        const post = await postResponse.json();
-        console.log('Created post:', post); // Debug log
+        if (!postResponse.ok) {
+            throw new Error(`Failed to create post: ${postResponse.status}`);
+        }
 
-        // Upload media files
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${post.id}_${i}.${fileExt}`;
+        const post = await postResponse.json();
+        console.log('Created post:', post);
+
+        // Upload each file
+        for (let i = 0; i < selectedFiles.length; i++) {
+            const file = selectedFiles[i];
+            
+            // Generate unique file path
+            const ext = file.name.split('.').pop();
+            const filePath = `${post.id}/${Date.now()}_${i}.${ext}`;
+            console.log('Uploading', file.name, 'to', filePath);
 
             // Upload to Supabase Storage
             const formData = new FormData();
             formData.append('file', file);
 
-            const uploadResponse = await fetch(`${SUPABASE_URL}/storage/v1/object/media/${fileName}`, {
+            const uploadResponse = await fetch(`${SUPABASE_URL}/storage/v1/object/media/${filePath}`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
@@ -135,14 +155,15 @@ document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             });
 
             if (!uploadResponse.ok) {
-                throw new Error('Upload failed');
+                console.error('Upload failed for file:', file.name);
+                throw new Error(`Upload failed: ${uploadResponse.status}`);
             }
 
-            const { data } = await uploadResponse.json();
-            const mediaUrl = `${SUPABASE_URL}/storage/v1/object/public/media/${fileName}`;
+            const uploadData = await uploadResponse.json();
+            const mediaUrl = `${SUPABASE_URL}/storage/v1/object/public/media/${filePath}`;
 
             // Create media record
-            await fetch(`${SUPABASE_URL}/rest/v1/media`, {
+            const mediaResponse = await fetch(`${SUPABASE_URL}/rest/v1/media`, {
                 method: 'POST',
                 headers: {
                     'apikey': SUPABASE_ANON_KEY,
@@ -156,12 +177,16 @@ document.getElementById('uploadForm').addEventListener('submit', async (e) => {
                     position: i
                 })
             });
+
+            if (!mediaResponse.ok) {
+                throw new Error(`Failed to create media record: ${mediaResponse.status}`);
+            }
         }
 
-        // Redirect to feed
+        // Redirect to feed on success
         window.location.href = 'feed.html';
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Upload error:', error);
         alert('Si è verificato un errore durante il caricamento. Riprova più tardi.');
     }
 }); 
