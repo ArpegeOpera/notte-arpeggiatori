@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carica - La Notte degli Arpeggiatori</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center">Carica Media</h1>
+        <form id="uploadForm">
+            <div class="form-group">
+                <textarea id="description" placeholder="Aggiungi una descrizione..." rows="4"></textarea>
+            </div>
+
+            <div class="dropzone" id="dropzone">
+                <p>Trascina qui i file o clicca per selezionarli</p>
+                <input type="file" id="fileInput" multiple accept="image/*,video/*" style="display: none;">
+            </div>
+
+            <div id="preview" class="thumbnails"></div>
+
+            <button type="submit" class="btn btn-primary mt-2" style="width: 100%;">Pubblica</button>
+        </form>
+    </div>
+    <script src="assets/js/upload.js"></script>
+</body>
+</html> 
