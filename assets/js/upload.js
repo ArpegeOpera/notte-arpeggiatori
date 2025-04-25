@@ -118,7 +118,8 @@ document.getElementById('upload-form').addEventListener('submit', async (e) => {
                 'apikey': SUPABASE_ANON_KEY,
                 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
                 'Content-Type': 'application/json',
-                'Prefer': 'return=representation'
+                'Prefer': 'return=representation',
+                'X-User-Id': localStorage.getItem('user_id')
             },
             body: JSON.stringify({
                 user_id: localStorage.getItem('user_id'),
@@ -149,7 +150,8 @@ document.getElementById('upload-form').addEventListener('submit', async (e) => {
             const uploadResponse = await fetch(`${SUPABASE_URL}/storage/v1/object/media/${filePath}`, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                    'X-User-Id': localStorage.getItem('user_id')
                 },
                 body: formData
             });
@@ -168,7 +170,8 @@ document.getElementById('upload-form').addEventListener('submit', async (e) => {
                 headers: {
                     'apikey': SUPABASE_ANON_KEY,
                     'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'X-User-Id': localStorage.getItem('user_id')
                 },
                 body: JSON.stringify({
                     post_id: post.id,

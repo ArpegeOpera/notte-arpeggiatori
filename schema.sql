@@ -54,15 +54,15 @@ CREATE POLICY "Users can view all posts" ON posts
 
 -- Users can create their own posts
 CREATE POLICY "Users can create own posts" ON posts
-    FOR INSERT WITH CHECK (auth.uid() = user_id);
+    FOR INSERT WITH CHECK (current_setting('request.headers')::json->>'x-user-id' = user_id::text);
 
 -- Users can update their own posts
 CREATE POLICY "Users can update own posts" ON posts
-    FOR UPDATE USING (auth.uid() = user_id);
+    FOR UPDATE USING (current_setting('request.headers')::json->>'x-user-id' = user_id::text);
 
 -- Users can delete their own posts
 CREATE POLICY "Users can delete own posts" ON posts
-    FOR DELETE USING (auth.uid() = user_id);
+    FOR DELETE USING (current_setting('request.headers')::json->>'x-user-id' = user_id::text);
 
 -- Users can read all media
 CREATE POLICY "Users can view all media" ON media
@@ -74,7 +74,7 @@ CREATE POLICY "Users can create media for own posts" ON media
         EXISTS (
             SELECT 1 FROM posts
             WHERE posts.id = media.post_id
-            AND posts.user_id = auth.uid()
+            AND posts.user_id::text = current_setting('request.headers')::json->>'x-user-id'
         )
     );
 
@@ -84,7 +84,7 @@ CREATE POLICY "Users can update media for own posts" ON media
         EXISTS (
             SELECT 1 FROM posts
             WHERE posts.id = media.post_id
-            AND posts.user_id = auth.uid()
+            AND posts.user_id::text = current_setting('request.headers')::json->>'x-user-id'
         )
     );
 
@@ -94,6 +94,6 @@ CREATE POLICY "Users can delete media for own posts" ON media
         EXISTS (
             SELECT 1 FROM posts
             WHERE posts.id = media.post_id
-            AND posts.user_id = auth.uid()
+            AND posts.user_id::text = current_setting('request.headers')::json->>'x-user-id'
         )
     ); 
