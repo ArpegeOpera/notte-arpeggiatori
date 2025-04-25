@@ -1,10 +1,6 @@
-// Replace these with your Supabase credentials
-const SUPABASE_URL = 'https://kfodrrjvlskvkzjnqfzs.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtmb2Rycmp2bHNrdmt6am5xZnpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0MTg2NzAsImV4cCI6MjA2MDk5NDY3MH0.FNJA93ggmRmQaD9OnpSnVFYB3EreeRpJ33zSTsxS28c';
-
-// Debug: Log configuration
-console.log('SUPABASE_URL:', SUPABASE_URL);
-console.log('SUPABASE_ANON_KEY:', SUPABASE_ANON_KEY?.substring(0, 10) + '...');
+// Supabase URL and anon key are provided as globals in upload.html
+console.log('SUPABASE_URL:', window.SUPABASE_URL);
+console.log('SUPABASE_ANON_KEY:', window.SUPABASE_ANON_KEY?.substring(0, 10) + '...');
 
 // Check if user is logged in
 const userId = localStorage.getItem('user_id');
@@ -29,7 +25,7 @@ function generateJWT(userId) {
         role: 'authenticated',
         exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
     }));
-    const signature = btoa(SUPABASE_ANON_KEY); // This is just for demo, not secure!
+    const signature = btoa(window.SUPABASE_ANON_KEY); // This is just for demo, not secure!
     return `${header}.${payload}.${signature}`;
 }
 
@@ -136,11 +132,11 @@ document.getElementById('upload-form').addEventListener('submit', async (e) => {
     try {
         const description = document.getElementById('description').value;
         // Create post record
-        const postResponse = await fetch(`${SUPABASE_URL}/rest/v1/posts`, {
+        const postResponse = await fetch(`${window.SUPABASE_URL}/rest/v1/posts`, {
             method: 'POST',
             headers: {
-                'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'apikey': window.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${window.SUPABASE_ANON_KEY}`,
                 'Content-Type': 'application/json',
                 'Prefer': 'return=representation'
             },
@@ -161,9 +157,9 @@ document.getElementById('upload-form').addEventListener('submit', async (e) => {
             // Upload to Supabase Storage
             const formData = new FormData();
             formData.append('file', file);
-            const uploadResponse = await fetch(`${SUPABASE_URL}/storage/v1/object/media/${filePath}`, {
+            const uploadResponse = await fetch(`${window.SUPABASE_URL}/storage/v1/object/media/${filePath}`, {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+                headers: { 'Authorization': `Bearer ${window.SUPABASE_ANON_KEY}` },
                 body: formData
             });
             if (!uploadResponse.ok) {
@@ -171,12 +167,12 @@ document.getElementById('upload-form').addEventListener('submit', async (e) => {
             }
 
             // Create media record
-            const mediaUrl = `${SUPABASE_URL}/storage/v1/object/public/media/${filePath}`;
-            const mediaResponse = await fetch(`${SUPABASE_URL}/rest/v1/media`, {
+            const mediaUrl = `${window.SUPABASE_URL}/storage/v1/object/public/media/${filePath}`;
+            const mediaResponse = await fetch(`${window.SUPABASE_URL}/rest/v1/media`, {
                 method: 'POST',
                 headers: {
-                    'apikey': SUPABASE_ANON_KEY,
-                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                    'apikey': window.SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${window.SUPABASE_ANON_KEY}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
