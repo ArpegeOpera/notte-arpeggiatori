@@ -30,7 +30,9 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
                 },
                 body: JSON.stringify({ username })
             });
-            userData = await createResponse.json();
+            // Supabase returns an array of created rows
+            const created = await createResponse.json();
+            userData = Array.isArray(created) ? created[0] : created;
         } else {
             userData = users[0];
         }
