@@ -48,7 +48,11 @@ function renderPosts(posts) {
 
         const avatar = document.createElement('img');
         avatar.className = 'avatar';
-        avatar.src = post.users.profile_url || 'https://via.placeholder.com/40';
+        if (post.users.profile_url) {
+            avatar.src = post.users.profile_url;
+        } else {
+            avatar.style.display = 'none';
+        }
         avatar.alt = post.users.username;
 
         const username = document.createElement('span');
