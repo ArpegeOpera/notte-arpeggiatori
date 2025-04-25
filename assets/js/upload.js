@@ -124,73 +124,67 @@ function createThumbnail(file) {
 document.getElementById('upload-form').addEventListener('submit', async (e) => {
     e.preventDefault();
 
+    // DEBUG: Validate file selection
     if (selectedFiles.length === 0) {
         alert('Seleziona almeno un file');
         return;
     }
 
     try {
+        console.log('SUPABASE_URL', window.SUPABASE_URL); // DEBUG
         const description = document.getElementById('description').value;
-        // Create post record
-        const postResponse = await fetch(`${window.SUPABASE_URL}/rest/v1/posts`, {
-            method: 'POST',
-            headers: {
-                'apikey': window.SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${window.SUPABASE_ANON_KEY}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=representation'
-            },
-            body: JSON.stringify({ user_id: userId, description })
-        });
-        if (!postResponse.ok) {
-            throw new Error(`Failed to create post: ${postResponse.status}`);
-        }
-        const post = await postResponse.json();
-        console.log('Created post:', post);
+
+        // Create post record using supabase-js v2
+        const { data: postData, error: postError } = await supabase
+            .from('posts')
+            .insert([{ user_id: userId, description }])
+            .select('id')
+            .single();
+        if (postError) throw postError;
+        console.log('Created post:', postData);
 
         // Upload each file
         for (let i = 0; i < selectedFiles.length; i++) {
             const file = selectedFiles[i];
             const ext = file.name.split('.').pop();
-            const filePath = `${post.id}/${Date.now()}_${i}.${ext}`;
+            const timestamp = Date.now();
+            const filePath = `${postData.id}/${timestamp}_${i}.${ext}`;
+
+            console.log('Bucket path', filePath); // DEBUG
 
             // Upload to Supabase Storage
-            const formData = new FormData();
-            formData.append('file', file);
-            const uploadResponse = await fetch(`${window.SUPABASE_URL}/storage/v1/object/media/${filePath}`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${window.SUPABASE_ANON_KEY}` },
-                body: formData
-            });
-            if (!uploadResponse.ok) {
-                throw new Error(`Upload failed: ${uploadResponse.status}`);
-            }
+            const { data: uploadData, error: uploadError } = await supabase
+                .storage
+                .from('media')
+                .upload(filePath, file, {
+                    cacheControl: '3600',
+                    upsert: false,
+                    contentType: file.type
+                });
+            if (uploadError) throw uploadError;
+            console.log('Upload success:', uploadData);
 
-            // Create media record
-            const mediaUrl = `${window.SUPABASE_URL}/storage/v1/object/public/media/${filePath}`;
-            const mediaResponse = await fetch(`${window.SUPABASE_URL}/rest/v1/media`, {
-                method: 'POST',
-                headers: {
-                    'apikey': window.SUPABASE_ANON_KEY,
-                    'Authorization': `Bearer ${window.SUPABASE_ANON_KEY}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    post_id: post.id,
-                    url: mediaUrl,
-                    media_type: file.type.startsWith('image/') ? 'image' : 'video',
-                    position: i
-                })
-            });
-            if (!mediaResponse.ok) {
-                throw new Error(`Failed to create media record: ${mediaResponse.status}`);
-            }
+            // Get public URL
+            const { data: urlData, error: urlError } = await supabase
+                .storage
+                .from('media')
+                .getPublicUrl(filePath);
+            if (urlError) throw urlError;
+            console.log('Public URL:', urlData.publicUrl);
+
+            // Insert media record
+            const mediaType = file.type.startsWith('image/') ? 'image' : 'video';
+            const { error: mediaError } = await supabase
+                .from('media')
+                .insert([{ post_id: postData.id, url: urlData.publicUrl, media_type: mediaType, position: i }]);
+            if (mediaError) throw mediaError;
+            console.log('Media record created at position', i);
         }
 
         // Redirect to feed on success
         window.location.href = 'feed.html';
     } catch (error) {
-        console.error('Upload error:', error);
+        console.error('Upload error:', error.message); // DEBUG
         alert('Si è verificato un errore durante il caricamento. Riprova più tardi.');
     }
 }); 
