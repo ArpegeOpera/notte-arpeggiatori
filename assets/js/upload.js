@@ -124,6 +124,7 @@ function createThumbnail(file) {
     preview.appendChild(thumbnail);
 }
 
+// Handle form submit for uploading media
 document.getElementById('upload-form').addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -133,63 +134,49 @@ document.getElementById('upload-form').addEventListener('submit', async (e) => {
     }
 
     try {
-        // Create post first
+        const description = document.getElementById('description').value;
+        // Create post record
         const postResponse = await fetch(`${SUPABASE_URL}/rest/v1/posts`, {
             method: 'POST',
             headers: {
                 'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${accessToken}`,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
                 'Content-Type': 'application/json',
                 'Prefer': 'return=representation'
             },
-            body: JSON.stringify({
-                user_id: userId,
-                description: document.getElementById('description').value
-            })
+            body: JSON.stringify({ user_id: userId, description })
         });
-
         if (!postResponse.ok) {
             throw new Error(`Failed to create post: ${postResponse.status}`);
         }
-
         const post = await postResponse.json();
         console.log('Created post:', post);
 
         // Upload each file
         for (let i = 0; i < selectedFiles.length; i++) {
             const file = selectedFiles[i];
-            
-            // Generate unique file path
             const ext = file.name.split('.').pop();
             const filePath = `${post.id}/${Date.now()}_${i}.${ext}`;
-            console.log('Uploading', file.name, 'to', filePath);
 
             // Upload to Supabase Storage
             const formData = new FormData();
             formData.append('file', file);
-
             const uploadResponse = await fetch(`${SUPABASE_URL}/storage/v1/object/media/${filePath}`, {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`
-                },
+                headers: { 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
                 body: formData
             });
-
             if (!uploadResponse.ok) {
-                console.error('Upload failed for file:', file.name);
                 throw new Error(`Upload failed: ${uploadResponse.status}`);
             }
 
-            const uploadData = await uploadResponse.json();
-            const mediaUrl = `${SUPABASE_URL}/storage/v1/object/public/media/${filePath}`;
-
             // Create media record
+            const mediaUrl = `${SUPABASE_URL}/storage/v1/object/public/media/${filePath}`;
             const mediaResponse = await fetch(`${SUPABASE_URL}/rest/v1/media`, {
                 method: 'POST',
                 headers: {
                     'apikey': SUPABASE_ANON_KEY,
-                    'Authorization': `Bearer ${accessToken}`,
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
@@ -199,7 +186,6 @@ document.getElementById('upload-form').addEventListener('submit', async (e) => {
                     position: i
                 })
             });
-
             if (!mediaResponse.ok) {
                 throw new Error(`Failed to create media record: ${mediaResponse.status}`);
             }

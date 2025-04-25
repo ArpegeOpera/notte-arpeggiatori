@@ -3,15 +3,27 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Drop existing policies
 DROP POLICY IF EXISTS "Users can view all users" ON users;
+DROP POLICY IF EXISTS "Anyone can view all users" ON users;
 DROP POLICY IF EXISTS "Users can update own profile" ON users;
+DROP POLICY IF EXISTS "Anyone can create users" ON users;
+
 DROP POLICY IF EXISTS "Users can view all posts" ON posts;
+DROP POLICY IF EXISTS "Anyone can view all posts" ON posts;
 DROP POLICY IF EXISTS "Users can create own posts" ON posts;
+DROP POLICY IF EXISTS "Anyone can create posts" ON posts;
 DROP POLICY IF EXISTS "Users can update own posts" ON posts;
+DROP POLICY IF EXISTS "Anyone can update own posts" ON posts;
 DROP POLICY IF EXISTS "Users can delete own posts" ON posts;
+DROP POLICY IF EXISTS "Anyone can delete own posts" ON posts;
+
 DROP POLICY IF EXISTS "Users can view all media" ON media;
+DROP POLICY IF EXISTS "Anyone can view all media" ON media;
 DROP POLICY IF EXISTS "Users can create media for own posts" ON media;
+DROP POLICY IF EXISTS "Anyone can create media" ON media;
 DROP POLICY IF EXISTS "Users can update media for own posts" ON media;
+DROP POLICY IF EXISTS "Anyone can update media for own posts" ON media;
 DROP POLICY IF EXISTS "Users can delete media for own posts" ON media;
+DROP POLICY IF EXISTS "Anyone can delete media for own posts" ON media;
 
 -- Create users table if not exists
 CREATE TABLE IF NOT EXISTS users (
@@ -102,4 +114,8 @@ CREATE POLICY "Anyone can delete media for own posts" ON media
             WHERE posts.id = media.post_id
             AND posts.user_id::text = current_setting('request.jwt.claims', true)::json->>'sub'
         )
-    ); 
+    );
+
+-- After RLS policies, disable RLS for public access
+ALTER TABLE posts DISABLE ROW LEVEL SECURITY;
+ALTER TABLE media DISABLE ROW LEVEL SECURITY; 
