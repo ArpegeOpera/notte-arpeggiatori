@@ -3,7 +3,9 @@ const SUPABASE_URL = 'https://kfodrrjvlskvkzjnqfzs.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtmb2Rycmp2bHNrdmt6am5xZnpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0MTg2NzAsImV4cCI6MjA2MDk5NDY3MH0.FNJA93ggmRmQaD9OnpSnVFYB3EreeRpJ33zSTsxS28c';
 
 // Check if user is logged in
-if (!localStorage.getItem('user_id')) {
+const userId = localStorage.getItem('user_id');
+const accessToken = localStorage.getItem('access_token');
+if (!userId || !accessToken) {
     window.location.href = 'index.html';
 }
 
@@ -12,12 +14,16 @@ async function loadPosts() {
         const response = await fetch(`${SUPABASE_URL}/rest/v1/posts?select=*,media(*),users(username,profile_url)&order=created_at.desc`, {
             headers: {
                 'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                'Authorization': `Bearer ${accessToken}`
             }
         });
 
+        if (!response.ok) {
+            throw new Error(`Failed to load posts: ${response.status}`);
+        }
+
         const posts = await response.json();
-        console.log('Loaded posts:', posts); // Debug log
+        console.log('Loaded posts:', posts);
         renderPosts(posts);
     } catch (error) {
         console.error('Error loading posts:', error);

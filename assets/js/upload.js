@@ -7,8 +7,30 @@ console.log('SUPABASE_URL:', SUPABASE_URL);
 console.log('SUPABASE_ANON_KEY:', SUPABASE_ANON_KEY?.substring(0, 10) + '...');
 
 // Check if user is logged in
-if (!localStorage.getItem('user_id')) {
+const userId = localStorage.getItem('user_id');
+if (!userId) {
     window.location.href = 'index.html';
+}
+
+// Get access token from localStorage or generate one
+let accessToken = localStorage.getItem('access_token');
+if (!accessToken) {
+    // Generate a JWT token using the user ID
+    accessToken = generateJWT(userId);
+    localStorage.setItem('access_token', accessToken);
+}
+
+function generateJWT(userId) {
+    // This is a simple JWT generation for demo purposes
+    // In a production environment, this should be handled by your authentication server
+    const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+    const payload = btoa(JSON.stringify({ 
+        sub: userId,
+        role: 'authenticated',
+        exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
+    }));
+    const signature = btoa(SUPABASE_ANON_KEY); // This is just for demo, not secure!
+    return `${header}.${payload}.${signature}`;
 }
 
 // Initialize DOM elements
@@ -116,13 +138,12 @@ document.getElementById('upload-form').addEventListener('submit', async (e) => {
             method: 'POST',
             headers: {
                 'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
-                'Prefer': 'return=representation',
-                'X-User-Id': localStorage.getItem('user_id')
+                'Prefer': 'return=representation'
             },
             body: JSON.stringify({
-                user_id: localStorage.getItem('user_id'),
+                user_id: userId,
                 description: document.getElementById('description').value
             })
         });
@@ -150,8 +171,7 @@ document.getElementById('upload-form').addEventListener('submit', async (e) => {
             const uploadResponse = await fetch(`${SUPABASE_URL}/storage/v1/object/media/${filePath}`, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                    'X-User-Id': localStorage.getItem('user_id')
+                    'Authorization': `Bearer ${accessToken}`
                 },
                 body: formData
             });
@@ -169,9 +189,8 @@ document.getElementById('upload-form').addEventListener('submit', async (e) => {
                 method: 'POST',
                 headers: {
                     'apikey': SUPABASE_ANON_KEY,
-                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                    'Content-Type': 'application/json',
-                    'X-User-Id': localStorage.getItem('user_id')
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     post_id: post.id,
