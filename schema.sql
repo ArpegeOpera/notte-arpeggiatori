@@ -52,60 +52,54 @@ ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE media ENABLE ROW LEVEL SECURITY;
 
 -- Basic RLS policies
--- Users can read all users
-CREATE POLICY "Users can view all users" ON users
+-- Anyone can read all users
+CREATE POLICY "Anyone can view all users" ON users
     FOR SELECT USING (true);
 
--- Users can only update their own profile
-CREATE POLICY "Users can update own profile" ON users
-    FOR UPDATE USING (auth.uid()::text = id::text);
+-- Anyone can create users
+CREATE POLICY "Anyone can create users" ON users
+    FOR INSERT WITH CHECK (true);
 
--- Users can read all posts
-CREATE POLICY "Users can view all posts" ON posts
+-- Anyone can read all posts
+CREATE POLICY "Anyone can view all posts" ON posts
     FOR SELECT USING (true);
 
--- Users can create their own posts
-CREATE POLICY "Users can create own posts" ON posts
-    FOR INSERT WITH CHECK (auth.uid()::text = user_id::text);
+-- Anyone can create posts
+CREATE POLICY "Anyone can create posts" ON posts
+    FOR INSERT WITH CHECK (true);
 
--- Users can update their own posts
-CREATE POLICY "Users can update own posts" ON posts
-    FOR UPDATE USING (auth.uid()::text = user_id::text);
+-- Anyone can update their own posts
+CREATE POLICY "Anyone can update own posts" ON posts
+    FOR UPDATE USING (user_id::text = current_setting('request.jwt.claims', true)::json->>'sub');
 
--- Users can delete their own posts
-CREATE POLICY "Users can delete own posts" ON posts
-    FOR DELETE USING (auth.uid()::text = user_id::text);
+-- Anyone can delete their own posts
+CREATE POLICY "Anyone can delete own posts" ON posts
+    FOR DELETE USING (user_id::text = current_setting('request.jwt.claims', true)::json->>'sub');
 
--- Users can read all media
-CREATE POLICY "Users can view all media" ON media
+-- Anyone can read all media
+CREATE POLICY "Anyone can view all media" ON media
     FOR SELECT USING (true);
 
--- Users can create media for their own posts
-CREATE POLICY "Users can create media for own posts" ON media
-    FOR INSERT WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM posts
-            WHERE posts.id = media.post_id
-            AND posts.user_id::text = auth.uid()::text
-        )
-    );
+-- Anyone can create media
+CREATE POLICY "Anyone can create media" ON media
+    FOR INSERT WITH CHECK (true);
 
--- Users can update media for their own posts
-CREATE POLICY "Users can update media for own posts" ON media
+-- Anyone can update media for their own posts
+CREATE POLICY "Anyone can update media for own posts" ON media
     FOR UPDATE USING (
         EXISTS (
             SELECT 1 FROM posts
             WHERE posts.id = media.post_id
-            AND posts.user_id::text = auth.uid()::text
+            AND posts.user_id::text = current_setting('request.jwt.claims', true)::json->>'sub'
         )
     );
 
--- Users can delete media for their own posts
-CREATE POLICY "Users can delete media for own posts" ON media
+-- Anyone can delete media for their own posts
+CREATE POLICY "Anyone can delete media for own posts" ON media
     FOR DELETE USING (
         EXISTS (
             SELECT 1 FROM posts
             WHERE posts.id = media.post_id
-            AND posts.user_id::text = auth.uid()::text
+            AND posts.user_id::text = current_setting('request.jwt.claims', true)::json->>'sub'
         )
     ); 
